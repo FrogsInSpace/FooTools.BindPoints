@@ -1,10 +1,10 @@
-#include "maxscrpt\Maxscrpt.h"
-#include "maxscrpt\Strings.h"
-#include "maxscrpt\arrays.h"
-#include "maxscrpt\3DMath.h"
-#include "maxscrpt\Numbers.h"
-#include "maxscrpt\MAXclses.h"
-#include "maxscrpt\definsfn.h"
+#include "maxscript\Maxscript.h"
+#include "maxscript\foundation\strings.h"
+#include "maxscript\foundation\arrays.h"
+#include "maxscript\foundation\3DMath.h"
+#include "maxscript\foundation\Numbers.h"
+#include "maxscript\maxwrapper\maxclasses.h"
+#include "maxscript\macros\define_instantiation_functions.h"
 
 #include "ToNode.h"
 #include "ToShape.h"
@@ -20,18 +20,22 @@
 		id != TOPOINT_CLASSID )					\
 		throw RuntimeError(GetString(IDS_NOTBINDERROR), arg_list[0]);
 
-#define get_valid_node(_checknode, _node, _fn)								\
-	nv = _checknode;														\
-	if (is_node(nv))														\
-	{																		\
-		if(nv->ref_deleted)													\
-			throw RuntimeError("Attempted to access to deleted object");	\
-	}																		\
-	else																	\
-	{																		\
-		throw RuntimeError (#_fn##" requires a node");						\
-	}																		\
+#define get_valid_node(_checknode, _node, _fn)									\
+	nv = _checknode;															\
+	if (is_node(nv))															\
+	{																			\
+		if(nv->ref_deleted)														\
+			throw RuntimeError(_T("Attempted to access to deleted object"));	\
+	}																			\
+	else																		\
+	{																			\
+		throw RuntimeError(_T(#_fn##" requires a node"));						\
+	}																			\
 	_node = nv->to_node()
+
+/*		throw RuntimeError(_T(#_fn)##_T(" requires a node"));					 */
+
+							
 
 def_struct_primitive( bindOps_update,			bindOps,	"Update");
 def_struct_primitive( bindOps_addNode,			bindOps,	"AddNode");
@@ -558,3 +562,4 @@ Value* bindOps_setBindWeight_cf(Value** arg_list, int count)
 
 	return (res ? &true_value : &false_value);
 }
+

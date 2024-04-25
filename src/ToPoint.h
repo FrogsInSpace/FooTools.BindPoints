@@ -1,34 +1,41 @@
 #include "BindPoints.h"
-#include "ToNode_Binds.h"
+#include "ToPoint_Binds.h"
 
-#define TONODE_CLASSID Class_ID(0x59177a17, 0x739b4ff1)
+#define TOPOINT_CLASSID Class_ID(0xfa8a90f, 0xecaeeb6)
 
 // version (now using global CURRENT_VERSION):
 // 1 - initial version
-// 4 - added pblock as ref 0 (skipped versions to get in sync)
-//#define NODE_VERSION		4
+// 2 - weighting
+// 4 - pblock as ref 0
+//#define POINT_VERSION		4
 
-class ToNode : public Modifier
+class ToPoint : public Modifier
 {
 	public:
 		IParamBlock2* pblock;
 		Matrix3 thisTM;
 		Tab<INode*> nodes;
-		Tab<Matrix3> baseTM;
-		Tab<NodePoint*> pointInfo;
+		Tab<PointPoint*> pointInfo;
 		int ver;
 
 		static IObjParam* ip;
 		static HWND hWnd;
 		HWND hAboutRollup;
 
-		ToNode();
-		virtual ~ToNode();
+		ToPoint();
+		virtual ~ToPoint();
 
-		Class_ID ClassID() { return TONODE_CLASSID; }
+		Class_ID ClassID() { return TOPOINT_CLASSID; }
 		SClass_ID SuperClassID() { return OSM_CLASS_ID; }
-		void GetClassName(TSTR& s) { s = GetString(IDS_TONODE_CLASSNAME); }
-		TCHAR *GetObjectName() { return GetString(IDS_TONODE_CLASSNAME); }
+
+#if MAX_RELEASE_R24
+		void GetClassName(MSTR& s, bool localized) const override { s = GetString(IDS_TOPOINT_CLASSNAME); }
+		const TCHAR* GetObjectName(bool localized) { return GetString(IDS_TOPOINT_CLASSNAME); }
+#else
+		void GetClassName(TSTR& s) { s = GetString(IDS_TOPOINT_CLASSNAME); }
+		const TCHAR* GetObjectName() { return GetString(IDS_TOPOINT_CLASSNAME); }
+#endif
+
 		CreateMouseCallBack* GetCreateMouseCallBack() { return NULL; }
 		void DeleteThis() { delete this; }
 		void BeginEditParams(IObjParam *ip, ULONG flags,Animatable *prev);
@@ -38,8 +45,12 @@ class ToNode : public Modifier
 		int NumRefs();
 		RefTargetHandle GetReference(int i);
 		void SetReference(int i, RefTargetHandle rtarg);
-		RefResult NotifyRefChanged(	Interval changeInt, RefTargetHandle hTarget, PartID& partID,  RefMessage message);
 
+#if MAX_RELEASE_R17
+		virtual RefResult NotifyRefChanged(const Interval& changeInt, RefTargetHandle hTarget, PartID& partID,RefMessage message, BOOL propagate);
+#else
+		RefResult NotifyRefChanged(Interval changeInt, RefTargetHandle hTarget, PartID& partID, RefMessage message);
+#endif
 		int	NumParamBlocks() { return 1; }
 		IParamBlock2* GetParamBlock(int i) { return ((i == 0) ? pblock : NULL); }
 		IParamBlock2* GetParamBlockByID(BlockID id) { return ((pblock->ID() == id) ? pblock : NULL); }
@@ -64,12 +75,12 @@ class ToNode : public Modifier
 		int GetNumPoints();
 		void SetNumPoints(int numBinds);
 
-		BOOL Bind(INode* thisNode, int pIdx, int nodeIndex, float weight);
-		BOOL UnBind(int vi, int bi);
-		int GetNumBinds(int vi);
-		BOOL GetBindInfo(int pIdx, int bIdx, int& nIdx, float& weight);
-		float GetBindWeight(int vi, int bi);
-		BOOL SetBindWeight(int vi, int bi, float weight);
+		BOOL Bind(int thisIndex, int nodeIndex, int pointIndex, float weight);
+		BOOL UnBind(int pIdx, int bIdx);
+		int GetNumBinds(int pIdx);
+		BOOL GetBindInfo(int pIdx, int bIdx, int& nIdx, int& idx, float& weight);
+		float GetBindWeight(int pIdx, int bIdx);
+		BOOL SetBindWeight(int pIdx, int bIdx, float weight);
 
 		void Update();
 		void UpdateUI();

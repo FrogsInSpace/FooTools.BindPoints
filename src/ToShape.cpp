@@ -1,8 +1,8 @@
 /**********************************************************************
  *<
-	FILE: ToPoint.cpp
+	FILE: ToShape.cpp
 
-	DESCRIPTION:	Bind points on one object to points on another.
+	DESCRIPTION:	Bind points on one object to splines in a shape.
 
 	CREATED BY:
 
@@ -11,28 +11,35 @@
  *>	Copyright (c) 1997, All Rights Reserved.
  **********************************************************************/
 
-#include "ToPoint.h"
+#include "ToShape.h"
 #include "AboutRollup.h"
 
-class ToPointClassDesc : public ClassDesc2 {
+class ToShapeClassDesc : public ClassDesc2 {
 	public:
-		int 			IsPublic() {return 1;}
-		void *			Create(BOOL loading = FALSE) {return new ToPoint();}
-		const TCHAR *	ClassName() {return GetString(IDS_TOPOINT_CLASSNAME);}
-		SClass_ID		SuperClassID() {return OSM_CLASS_ID;}
-		Class_ID		ClassID() {return TOPOINT_CLASSID;}
-		const TCHAR* 	Category() {return GetString(IDS_CATEGORY);}
-		const TCHAR*	InternalName() { return _T("BindToPoint"); }
+		int 			IsPublic() { return 1; }
+		void *			Create(BOOL loading = FALSE) { return new ToShape(); }
+		const TCHAR *	ClassName() { return GetString(IDS_TOSHAPE_CLASSNAME); }
+#if MAX_RELEASE_R24
+		const TCHAR* NonLocalizedClassName() { return ClassName(); }
+#endif
+		SClass_ID		SuperClassID() { return OSM_CLASS_ID; }
+		Class_ID		ClassID() { return TOSHAPE_CLASSID; }
+		const TCHAR* 	Category() { return GetString(IDS_CATEGORY); }
+		const TCHAR*	InternalName() { return _T("BindToShape"); }
 		HINSTANCE		HInstance() { return hInstance; }
 };
 
-static ToPointClassDesc ToPointDesc;
-ClassDesc2* GetToPointDesc() { return &ToPointDesc; }
+static ToShapeClassDesc ToShapeDesc;
+ClassDesc2* GetToShapeDesc() { return &ToShapeDesc; }
 
-IObjParam* ToPoint::ip = NULL;
-HWND ToPoint::hWnd = NULL;
+IObjParam* ToShape::ip = NULL;
+HWND ToShape::hWnd = NULL;
 
-static ParamBlockDesc2 bind_param_blk ( bind_params, _T("Parameters"),  0, &ToPointDesc,
+#if MAX_RELEASE_R15
+#define end p_end
+#endif
+
+static ParamBlockDesc2 bind_param_blk ( bind_params, _T("Parameters"),  0, &ToShapeDesc,
 	P_AUTO_CONSTRUCT + P_AUTO_UI, PBLOCK_REF,
 	//rollout
 	IDD_BIND, IDS_PARAMS, 0, 0, NULL,
@@ -45,12 +52,12 @@ static ParamBlockDesc2 bind_param_blk ( bind_params, _T("Parameters"),  0, &ToPo
 	end
 );
 
-class ToPointParamMapDlgProc : public ParamMap2UserDlgProc {
+class ToShapeParamMapDlgProc : public ParamMap2UserDlgProc {
 	public:
-		ToPoint *tp;
+		ToShape *ts;
 
-		ToPointParamMapDlgProc(ToPoint *mod) { tp = mod; }
-		void Update(TimeValue t) { if (tp) tp->UpdateUI(); }
+		ToShapeParamMapDlgProc(ToShape *mod) { ts = mod; }
+		void Update(TimeValue t) { if (ts) ts->UpdateUI(); }
 #if (MAX_RELEASE >= 9000)
 		INT_PTR DlgProc(TimeValue t,IParamMap2 *map,HWND hWnd,UINT msg,WPARAM wParam,LPARAM lParam);
 #else
@@ -60,19 +67,19 @@ class ToPointParamMapDlgProc : public ParamMap2UserDlgProc {
 };
 
 #if (MAX_RELEASE >= 9000)
-INT_PTR ToPointParamMapDlgProc::DlgProc(TimeValue t, IParamMap2* map, HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+INT_PTR ToShapeParamMapDlgProc::DlgProc(TimeValue t, IParamMap2* map, HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 #else
-BOOL ToPointParamMapDlgProc::DlgProc(TimeValue t, IParamMap2* map, HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+BOOL ToShapeParamMapDlgProc::DlgProc(TimeValue t, IParamMap2* map, HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 #endif
 {
 	switch (msg)
 	{
 		case WM_INITDIALOG :
 		{
-			tp->hWnd = hWnd;
+			ts->hWnd = hWnd;
 
 			// Update everything else...
-			tp->UpdateUI();
+			ts->UpdateUI();
 			break;
 		}
 		case WM_PAINT:
@@ -80,7 +87,7 @@ BOOL ToPointParamMapDlgProc::DlgProc(TimeValue t, IParamMap2* map, HWND hWnd, UI
 			break;
 		}
 		case WM_DESTROY :
-			tp->hWnd = NULL;
+			ts->hWnd = NULL;
 			break;
 	}
 	return FALSE;
@@ -88,14 +95,14 @@ BOOL ToPointParamMapDlgProc::DlgProc(TimeValue t, IParamMap2* map, HWND hWnd, UI
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 
-ToPoint::ToPoint()
+ToShape::ToShape()
 {
 
-#if MAX_RELEASE >= 9000
+#if MAX_RELEASE >= 9000	//max 9
 	pblock = NULL;	//set reference to NULL
 #endif
 
-	ToPointDesc.MakeAutoParamBlocks(this);
+	ToShapeDesc.MakeAutoParamBlocks(this);
 
 	thisTM.IdentityMatrix();
 	nodes.ZeroCount();
@@ -104,7 +111,7 @@ ToPoint::ToPoint()
 	hAboutRollup = NULL;
 }
 
-ToPoint::~ToPoint()
+ToShape::~ToShape()
 {
 	for (int i=0; i<pointInfo.Count(); i++)
 		delete pointInfo[i];
@@ -112,24 +119,24 @@ ToPoint::~ToPoint()
 	DeleteAllRefsFromMe();
 }
 
-void ToPoint::BeginEditParams( IObjParam *ip, ULONG flags,Animatable *prev )
+void ToShape::BeginEditParams( IObjParam *ip, ULONG flags,Animatable *prev )
 {
 	this->ip = ip;
 
-	ToPointDesc.BeginEditParams(ip, this, flags, prev);
-	bind_param_blk.SetUserDlgProc(new ToPointParamMapDlgProc(this));
+	ToShapeDesc.BeginEditParams(ip, this, flags, prev);
+	bind_param_blk.SetUserDlgProc(new ToShapeParamMapDlgProc(this));
 	hAboutRollup = ip->AddRollupPage(hInstance, MAKEINTRESOURCE(IDD_ABOUT), aboutDlgProc, _T("About"));
 }
 
-void ToPoint::EndEditParams( IObjParam *ip, ULONG flags,Animatable *next )
+void ToShape::EndEditParams( IObjParam *ip, ULONG flags,Animatable *next)
 {
-	ToPointDesc.EndEditParams(ip, this, flags, next);
+	ToShapeDesc.EndEditParams(ip, this, flags, next);
 	ip->DeleteRollupPage(hAboutRollup);
 
 	this->ip = NULL;
 }
 
-void ToPoint::UpdateUI()
+void ToShape::UpdateUI()
 {
 	if (hWnd)
 	{
@@ -144,17 +151,17 @@ void ToPoint::UpdateUI()
 		for (i=0; i<pCount; i++)
 			bCount += pointInfo[i]->binds.Count();
 
-		str.printf("%d", nCount);
+		str.printf(_T("%d"), nCount);
 		hTextWnd = GetDlgItem(hWnd,IDC_NUMNODES);
 		SetWindowText(hTextWnd, str);
 		str.Resize(0);
 
-		str.printf("%d", pCount);
+		str.printf(_T("%d"), pCount);
 		hTextWnd = GetDlgItem(hWnd,IDC_NUMPOINTS);
 		SetWindowText(hTextWnd, str);
 		str.Resize(0);
 
-		str.printf("%d", bCount);
+		str.printf(_T("%d"), bCount);
 		hTextWnd = GetDlgItem(hWnd,IDC_NUMBINDS);
 		SetWindowText(hTextWnd, str);
 
@@ -167,12 +174,12 @@ void ToPoint::UpdateUI()
 	}
 }
 
-int ToPoint::NumRefs()
+int ToShape::NumRefs()
 {
 	return (NUM_REFS + nodes.Count());
 }
 
-RefTargetHandle ToPoint::GetReference(int i)
+RefTargetHandle ToShape::GetReference(int i)
 {
 	if (i == PBLOCK_REF)
 		return pblock;
@@ -180,7 +187,7 @@ RefTargetHandle ToPoint::GetReference(int i)
 		return nodes[i-NUM_REFS];
 }
 
-void ToPoint::SetReference(int i, RefTargetHandle rtarg)
+void ToShape::SetReference(int i, RefTargetHandle rtarg)
 {
 	if (i == PBLOCK_REF)
 		pblock = (IParamBlock2*)rtarg;
@@ -188,9 +195,12 @@ void ToPoint::SetReference(int i, RefTargetHandle rtarg)
 		nodes[i-NUM_REFS] = (INode*)rtarg;
 }
 
-RefResult ToPoint::NotifyRefChanged(
-	Interval changeInt, RefTargetHandle hTarget,
-	PartID& partID,  RefMessage message)
+
+#if MAX_RELEASE_R17
+RefResult ToShape::NotifyRefChanged(const Interval& changeInt, RefTargetHandle hTarget, PartID& partID, RefMessage message, BOOL propagate)
+#else
+RefResult ToShape::NotifyRefChanged(Interval changeInt, RefTargetHandle hTarget, PartID& partID, RefMessage message)
+#endif
 {
 	switch (message)
 	{
@@ -206,9 +216,9 @@ RefResult ToPoint::NotifyRefChanged(
 	return REF_SUCCEED;
 }
 
-RefTargetHandle ToPoint::Clone(RemapDir& remap)
+RefTargetHandle ToShape::Clone(RemapDir& remap)
 {
-	ToPoint* newmod = new ToPoint();
+	ToShape* newmod = new ToShape();
 
 	newmod->ReplaceReference(PBLOCK_REF, pblock->Clone(remap));
 
@@ -222,21 +232,23 @@ RefTargetHandle ToPoint::Clone(RemapDir& remap)
 
 	int pointCount = pointInfo.Count();
 	newmod->pointInfo.SetCount(pointCount);
-	for (int pIdx=0; pIdx<pointCount; pIdx++)
+	for (int vIdx=0; vIdx<pointCount; vIdx++)
 	{
-		int bindCount = pointInfo[pIdx]->binds.Count();
+		int bindCount = pointInfo[vIdx]->binds.Count();
 
-		newmod->pointInfo[pIdx] = new PointPoint;
-		newmod->pointInfo[pIdx]->binds.SetCount(bindCount);
+		newmod->pointInfo[vIdx] = new ShapePoint;
+		newmod->pointInfo[vIdx]->binds.SetCount(bindCount);
 
 		for (int bIdx=0; bIdx<bindCount; bIdx++)
 		{
-			PointBind* b = new PointBind;
-			b->basePos		= pointInfo[pIdx]->binds[bIdx]->basePos;
-			b->nodeIndex	= pointInfo[pIdx]->binds[bIdx]->nodeIndex;
-			b->pointIndex	= pointInfo[pIdx]->binds[bIdx]->pointIndex;
-			b->weight		= pointInfo[pIdx]->binds[bIdx]->weight;
-			newmod->pointInfo[pIdx]->binds[bIdx] = b;
+			ShapeBind* b = new ShapeBind;
+			b->basePos		= pointInfo[vIdx]->binds[bIdx]->basePos;
+			b->baseTan		= pointInfo[vIdx]->binds[bIdx]->baseTan;
+			b->lengthParam	= pointInfo[vIdx]->binds[bIdx]->lengthParam;
+			b->weight		= pointInfo[vIdx]->binds[bIdx]->weight;
+			b->nodeIndex	= pointInfo[vIdx]->binds[bIdx]->nodeIndex;
+			b->splineIndex	= pointInfo[vIdx]->binds[bIdx]->splineIndex;
+			newmod->pointInfo[vIdx]->binds[bIdx] = b;
 		}
 	}
 
@@ -249,18 +261,16 @@ RefTargetHandle ToPoint::Clone(RemapDir& remap)
 
 #define VERSION_CHUNK		0x0000
 #define THISTM_CHUNK		0x0001
-#define BINDINDEX_CHUNK		0x0002 // obsolete
-#define BASEPOINT_CHUNK		0x0003 // obsolete
-#define NUMNODES_CHUNK		0x0004
-#define POINTINFO_CHUNK		0x0005
+#define NUMNODES_CHUNK		0x0002
+#define POINTINFO_CHUNK		0x0003
 
-IOResult ToPoint::Save(ISave *isave)
+IOResult ToShape::Save(ISave *isave)
 {
 	ULONG nb;
 	IOResult res;
 
 	res = Modifier::Save(isave);
-	if (res != IO_OK) return res;
+    if (res != IO_OK) return res;
 
 	ver = CURRENT_VERSION;
 	isave->BeginChunk(VERSION_CHUNK);
@@ -282,16 +292,19 @@ IOResult ToPoint::Save(ISave *isave)
 		isave->BeginChunk(POINTINFO_CHUNK);
 
 		isave->Write(&pointCount, sizeof(int), &nb);
-		for (int pIdx=0; pIdx<pointCount; pIdx++)
+		for (int vIdx=0; vIdx<pointCount; vIdx++)
 		{
-			int bindCount = pointInfo[pIdx]->binds.Count();
+			int bindCount = pointInfo[vIdx]->binds.Count();
 			isave->Write(&bindCount, sizeof(int), &nb);
 			for (int bIdx=0; bIdx<bindCount; bIdx++)
 			{
-				isave->Write(&pointInfo[pIdx]->binds[bIdx]->basePos, sizeof(Point3), &nb);
-				isave->Write(&pointInfo[pIdx]->binds[bIdx]->nodeIndex, sizeof(int), &nb);
-				isave->Write(&pointInfo[pIdx]->binds[bIdx]->pointIndex, sizeof(int), &nb);
-				isave->Write(&pointInfo[pIdx]->binds[bIdx]->weight, sizeof(float), &nb);
+				isave->Write(&pointInfo[vIdx]->binds[bIdx]->basePos, sizeof(Point3), &nb);
+				isave->Write(&pointInfo[vIdx]->binds[bIdx]->baseTan, sizeof(Point3), &nb);
+				isave->Write(&pointInfo[vIdx]->binds[bIdx]->lengthParam, sizeof(float), &nb);
+				isave->Write(&pointInfo[vIdx]->binds[bIdx]->weight, sizeof(float), &nb);
+				isave->Write(&pointInfo[vIdx]->binds[bIdx]->nodeIndex, sizeof(int), &nb);
+				isave->Write(&pointInfo[vIdx]->binds[bIdx]->splineIndex, sizeof(int), &nb);
+				isave->Write(&pointInfo[vIdx]->binds[bIdx]->absolute, sizeof(BOOL), &nb);
 			}
 		}
 
@@ -301,15 +314,13 @@ IOResult ToPoint::Save(ISave *isave)
 	return IO_OK;
 }
 
-IOResult ToPoint::Load(ILoad *iload)
+IOResult ToShape::Load(ILoad *iload)
 {
 	ULONG nb;
 	IOResult res;
 
-	res = Modifier::Load(iload);
+    res = Modifier::Load(iload);
     if (res != IO_OK) return res;
-
-	int numNodes = 0;
 
 	while (IO_OK==(res=iload->OpenChunk()))
 	{
@@ -319,11 +330,11 @@ IOResult ToPoint::Load(ILoad *iload)
 				iload->Read(&ver,sizeof(int), &nb);
 				break;
 			}
-			case THISTM_CHUNK: {
+			case THISTM_CHUNK:
 				thisTM.Load(iload);
 				break;
-			}
 			case NUMNODES_CHUNK: {
+				int numNodes;
 				iload->Read(&numNodes,sizeof(int), &nb);
 				nodes.SetCount(numNodes);
 				for (int i=0; i<numNodes; i++) nodes[i] = NULL;
@@ -335,81 +346,34 @@ IOResult ToPoint::Load(ILoad *iload)
 				iload->Read(&pointCount, sizeof(int), &nb);
 				pointInfo.SetCount(pointCount);
 
-				for (int pIdx=0; pIdx<pointCount; pIdx++)
+				for (int vIdx=0; vIdx<pointCount; vIdx++)
 				{
-					pointInfo[pIdx] = new PointPoint;
+					pointInfo[vIdx] = new ShapePoint;
 
 					int bindCount;
 					iload->Read(&bindCount, sizeof(int), &nb);
-					pointInfo[pIdx]->binds.SetCount(bindCount);
+					pointInfo[vIdx]->binds.SetCount(bindCount);
 
 					for (int bIdx=0; bIdx<bindCount; bIdx++)
 					{
-						PointBind* b = new PointBind;
+						ShapeBind* b = new ShapeBind;
 						iload->Read(&b->basePos, sizeof(Point3), &nb);
-						iload->Read(&b->nodeIndex, sizeof(int), &nb);
-						iload->Read(&b->pointIndex, sizeof(int), &nb);
+						if (ver >= 2)
+							iload->Read(&b->baseTan, sizeof(Point3), &nb);
+						iload->Read(&b->lengthParam, sizeof(float), &nb);
 						iload->Read(&b->weight, sizeof(float), &nb);
-
-						if (b->pointIndex == -1) // check if it's a "null" bind from old version
-						{
-							b->pointIndex = 0;
-							b->weight = 0.0;
-						}
-
-						pointInfo[pIdx]->binds[bIdx] = b;
+						iload->Read(&b->nodeIndex, sizeof(int), &nb);
+						iload->Read(&b->splineIndex, sizeof(int), &nb);
+						if (ver >= 3)
+							iload->Read(&b->absolute, sizeof(BOOL), &nb);
+						pointInfo[vIdx]->binds[bIdx] = b;
 					}
-				}
-				break;
-			}
-			case BINDINDEX_CHUNK:
-			{
-				// make room for the one bind object
-				nodes.SetCount(1);
-				nodes[0] = NULL;
-
-				// set point count to number of binds
-				int pointCount;
-				iload->Read(&pointCount, sizeof(int), &nb);
-				pointInfo.SetCount(pointCount);
-
-				// make initial binds (one for each point), setting everything
-				// except the bindCoords (which are loaded later)
-				for (int pIdx=0; pIdx<pointCount; pIdx++)
-				{
-					pointInfo[pIdx] = new PointPoint;
-					pointInfo[pIdx]->binds.SetCount(1);
-					PointBind* b = new PointBind;
-
-					iload->Read(&b->pointIndex, sizeof(int), &nb);
-					if (b->pointIndex == -1) // check if it's a "null" bind from old version
-					{
-						b->pointIndex = 0;
-						b->weight = 0.0;
-					} else {
-						b->weight = 1.0;
-					}
-
-					b->nodeIndex = 0;
-					pointInfo[pIdx]->binds[0] = b;
-				}
-				break;
-			}
-			case BASEPOINT_CHUNK:
-			{
-				// finish setting up the binds for each point
-				int pointCount;
-				iload->Read(&pointCount, sizeof(int), &nb);
-
-				for (int pIdx=0; pIdx<pointCount; pIdx++)
-				{
-					iload->Read(&pointInfo[pIdx]->binds[0]->basePos, sizeof(Point3), &nb);
 				}
 
 				break;
 			}
 		}
-		iload->CloseChunk();
+		res = iload->CloseChunk();
 		if (res!=IO_OK)
 			return res;
 	}
@@ -417,7 +381,7 @@ IOResult ToPoint::Load(ILoad *iload)
 	return IO_OK;
 }
 
-int ToPoint::RemapRefOnLoad(int iref)
+int ToShape::RemapRefOnLoad(int iref)
 {
 	if (ver<4)
 		return (iref+NUM_REFS);
@@ -425,7 +389,7 @@ int ToPoint::RemapRefOnLoad(int iref)
 		return iref;
 }
 
-Interval ToPoint::LocalValidity(TimeValue t)
+Interval ToShape::LocalValidity(TimeValue t)
 {
 	if (TestAFlag(A_MOD_BEING_EDITED))
 		return NEVER;
@@ -444,36 +408,54 @@ Interval ToPoint::LocalValidity(TimeValue t)
 	return valid;
 }
 
-void ToPoint::ModifyObject(TimeValue t, ModContext &mc, ObjectState * os, INode *node)
+void ToShape::ModifyObject(TimeValue t, ModContext &mc, ObjectState * os, INode *node)
 {
 	if (!nodes.Count()) return;
 
 	int numPoints =	(os->obj->NumPoints() < GetNumPoints()) ?
-					os->obj->NumPoints() : GetNumPoints();
+						os->obj->NumPoints() : GetNumPoints();
 
 	Matrix3 iThisTM = Inverse(thisTM);
 	float strength = pblock->GetFloat(pb_strength, t);
-
-	Tab<Object*> nodeObjs;
-	nodeObjs.SetCount(nodes.Count());
-	for (int i=0; i<nodes.Count(); i++)
-		nodeObjs[i] = (nodes[i]->EvalWorldState(t)).obj;
 
 	for (int pIdx=0; pIdx<numPoints; pIdx++)
 	{
 		if (os->obj->GetSubselState() == 0 || os->obj->PointSelection(pIdx))
 		{
 			Point3 thisP = os->obj->GetPoint(pIdx) * thisTM;
-			Point3 offset(0.0f, 0.0f, 0.0f);
+			Point3 offset(0.0f,0.0f,0.0f);
 
 			for (int bIdx=0; bIdx<GetNumBinds(pIdx); bIdx++)
 			{
-				PointBind* b = pointInfo[pIdx]->binds[bIdx];
+				ShapeBind* b = pointInfo[pIdx]->binds[bIdx];
 
-				if (b->pointIndex < nodeObjs[b->nodeIndex]->NumPoints())
+				Point3 newPos, newTan;
+				if (InterpCurveWorld(t, b->nodeIndex, b->splineIndex, b->lengthParam, newPos, newTan))
 				{
-					Point3 newP = nodeObjs[b->nodeIndex]->GetPoint(b->pointIndex) * nodes[b->nodeIndex]->GetObjectTM(t);
-					offset += (newP - b->basePos) * b->weight * strength;
+					if (b->absolute)
+					{
+#if MAX_RELEASE_R22
+						Matrix3 rot = Matrix3();
+#else
+						Matrix3 rot(TRUE);
+#endif
+
+						if (b->baseTan != newTan)
+						{
+							float angle = (float)acos(DotProd(b->baseTan, newTan));
+							Point3 perp = CrossProd(b->baseTan, newTan);
+							rot = RotAngleAxisMatrix(Normalize(perp), angle);
+						}
+
+//						Point3 perpOffset = (thisP - b->basePos) * rot;
+//						Point3 finalPos = newPos + perpOffset;
+//						offset += (finalPos - thisP) * b->weight * strength;
+
+						// same thing as above, but avoiding making temporaries
+						offset += ((newPos + ((thisP - b->basePos) * rot)) - thisP) * b->weight * strength;
+					} else {
+						offset += (newPos - b->basePos) * b->weight * strength;
+					}
 				}
 			}
 
@@ -490,20 +472,46 @@ void ToPoint::ModifyObject(TimeValue t, ModContext &mc, ObjectState * os, INode 
 	os->obj->PointsWereChanged();
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////
+BOOL ToShape::InterpCurveWorld(TimeValue t, int nodeIndex, int splineIndex, float lengthParam, Point3& basePos, Point3& baseTan)
+{
+	if (nodeIndex < 0 || nodeIndex >= nodes.Count()) return FALSE;
 
-int ToPoint::GetNumPoints()
+	ObjectState os = nodes[nodeIndex]->EvalWorldState(t);
+
+	if (os.obj->SuperClassID() != SHAPE_CLASS_ID) return FALSE;
+
+	ShapeObject* shp = (ShapeObject*)os.obj;
+
+#if MAX_RELEASE_R20
+	if (splineIndex < 0 || splineIndex >= shp->NumberOfCurves(ip->GetTime())) return FALSE;
+#else
+	if (splineIndex < 0 || splineIndex >= shp->NumberOfCurves()) return FALSE;
+#endif
+
+	if (lengthParam < 0.0f) lengthParam = 0.0f;
+	if (lengthParam > 1.0f) lengthParam = 1.0f;
+
+	Matrix3 tm = nodes[nodeIndex]->GetObjectTM(t);
+	basePos = shp->InterpCurve3D(t, splineIndex, lengthParam, PARAM_NORMALIZED);
+	basePos = basePos * tm;
+	baseTan = shp->TangentCurve3D(t, splineIndex, lengthParam, PARAM_NORMALIZED);
+	baseTan = VectorTransform(tm, baseTan);
+
+	return TRUE;
+}
+
+int ToShape::GetNumPoints()
 {
 	return pointInfo.Count();
 }
 
-void ToPoint::SetNumPoints(int numBinds)
+void ToShape::SetNumPoints(int numBinds)
 {
 	if (numBinds > pointInfo.Count())
 	{
 		for (int i=pointInfo.Count(); i<numBinds; i++)
 		{
-			PointPoint* p = new PointPoint;
+			ShapePoint* p = new ShapePoint;
 			pointInfo.Append(1, &p);
 		}
 	} else {
@@ -514,9 +522,13 @@ void ToPoint::SetNumPoints(int numBinds)
 	UpdateUI();
 }
 
-BOOL ToPoint::AddNode(INode* thisNode, INode* node)
+BOOL ToShape::AddNode(INode* thisNode, INode* node)
 {
 	TimeValue t = GetCOREInterface()->GetTime();
+	ObjectState os = node->EvalWorldState(t);
+
+	if (os.obj->SuperClassID() != SHAPE_CLASS_ID)
+		return FALSE;
 
 	for (int i=0; i<nodes.Count(); i++)
 	{
@@ -540,7 +552,7 @@ BOOL ToPoint::AddNode(INode* thisNode, INode* node)
 	return TRUE;
 }
 
-BOOL ToPoint::RemoveNode(int i)
+BOOL ToShape::RemoveNode(int i)
 {
 	if (i<0 || i>=nodes.Count())
 		return FALSE;
@@ -553,13 +565,13 @@ BOOL ToPoint::RemoveNode(int i)
 	{
 		for (int bindIndex=(pointInfo[pointIndex]->binds.Count()-1); bindIndex>=0; bindIndex--)
 		{
-			int ni = pointInfo[pointIndex]->binds[bindIndex]->nodeIndex;
+			int si = pointInfo[pointIndex]->binds[bindIndex]->nodeIndex;
 
-			if (ni == i)
+			if (si == i)
 				UnBind(pointIndex, bindIndex);
-			else if (ni > i)
+			else if (si > i)
 			{
-				pointInfo[pointIndex]->binds[bindIndex]->nodeIndex = (ni-1);
+				pointInfo[pointIndex]->binds[bindIndex]->nodeIndex = (si-1);
 			}
 		}
 	}
@@ -569,12 +581,12 @@ BOOL ToPoint::RemoveNode(int i)
 	return TRUE;
 }
 
-int ToPoint::GetNumNodes()
+int ToShape::GetNumNodes()
 {
 	return nodes.Count();
 }
 
-INode* ToPoint::GetNode(int i)
+INode* ToShape::GetNode(int i)
 {
 	if (i>=0 && i<nodes.Count())
 		return nodes[i];
@@ -582,60 +594,60 @@ INode* ToPoint::GetNode(int i)
 		return NULL;
 }
 
-BOOL ToPoint::Bind(int thisIndex, int nodeIndex, int pointIndex, float weight)
+BOOL ToShape::Bind(int pIdx, int nodeIndex, int splineIndex, float lengthParam, float weight, BOOL absolute)
 {
-	if (thisIndex < 0 || thisIndex >= pointInfo.Count()) return FALSE;
-	if (nodeIndex < 0 || nodeIndex >= nodes.Count()) return FALSE;
-	if (pointIndex < 0) return FALSE;
+	if (pIdx < 0 || pIdx >= pointInfo.Count()) return FALSE;
 
 	Interface* ip = GetCOREInterface();
 	if (!ip) return FALSE;
 	TimeValue t = ip->GetTime();
 
-	ObjectState bindOS = nodes[nodeIndex]->EvalWorldState(t);
-	if (pointIndex >= bindOS.obj->NumPoints()) return FALSE;
-	Point3 basePos = bindOS.obj->GetPoint(pointIndex) * nodes[nodeIndex]->GetObjectTM(t);
+	Point3 basePos;
+	Point3 baseTan;
+	if (!InterpCurveWorld(t, nodeIndex, splineIndex, lengthParam, basePos, baseTan)) return FALSE;
 
-	BOOL res = pointInfo[thisIndex]->AddBind(basePos, nodeIndex, pointIndex, weight);
-
-	UpdateUI();
-
-	return res;
-}
-
-BOOL ToPoint::UnBind(int thisIndex, int bindIndex)
-{
-	if (thisIndex < 0 || thisIndex >= pointInfo.Count()) return FALSE;
-
-	BOOL res = pointInfo[thisIndex]->RemoveBind(bindIndex);
+	BOOL res = pointInfo[pIdx]->AddBind(basePos, baseTan, nodeIndex, splineIndex, lengthParam, weight, absolute);
 
 	UpdateUI();
 
 	return res;
 }
 
-int ToPoint::GetNumBinds(int thisIndex)
+BOOL ToShape::UnBind(int pIdx, int bIdx)
 {
-	if (thisIndex < 0 || thisIndex >= pointInfo.Count()) return -1;
+	if (pIdx < 0 || pIdx >= pointInfo.Count()) return FALSE;
 
-	int cnt = pointInfo[thisIndex]->binds.Count();
+	BOOL res = pointInfo[pIdx]->RemoveBind(bIdx);
+
+	UpdateUI();
+
+	return res;
+}
+
+int ToShape::GetNumBinds(int pIdx)
+{
+	if (pIdx < 0 || pIdx >= pointInfo.Count()) return -1;
+
+	int cnt = pointInfo[pIdx]->binds.Count();
 
 	return cnt;
 }
 
-BOOL ToPoint::GetBindInfo(int pIdx, int bIdx, int& nIdx, int& idx, float& weight)
+BOOL ToShape::GetBindInfo(int pIdx, int bIdx, int& nIdx, int& idx, float& lenParam, float& weight, BOOL& absolute)
 {
 	if (pIdx < 0 || pIdx >= pointInfo.Count() ||
 		bIdx < 0 || bIdx >= pointInfo[pIdx]->binds.Count()) return FALSE;
 
 	nIdx = pointInfo[pIdx]->binds[bIdx]->nodeIndex;
-	idx = pointInfo[pIdx]->binds[bIdx]->pointIndex;
+	idx = pointInfo[pIdx]->binds[bIdx]->splineIndex;
+	lenParam = pointInfo[pIdx]->binds[bIdx]->lengthParam;
 	weight = pointInfo[pIdx]->binds[bIdx]->weight;
+	absolute = pointInfo[pIdx]->binds[bIdx]->absolute;
 
 	return TRUE;
 }
 
-float ToPoint::GetBindWeight(int pIdx, int bIdx)
+float ToShape::GetBindWeight(int pIdx, int bIdx)
 {
 	if (pIdx < 0 || pIdx >= pointInfo.Count() ||
 		bIdx < 0 || bIdx >= pointInfo[pIdx]->binds.Count()) return -1.0f;
@@ -643,7 +655,7 @@ float ToPoint::GetBindWeight(int pIdx, int bIdx)
 	return pointInfo[pIdx]->binds[bIdx]->weight;
 }
 
-BOOL ToPoint::SetBindWeight(int pIdx, int bIdx, float weight)
+BOOL ToShape::SetBindWeight(int pIdx, int bIdx, float weight)
 {
 	if (pIdx < 0 || pIdx >= pointInfo.Count() ||
 		bIdx < 0 || bIdx >= pointInfo[pIdx]->binds.Count()) return FALSE;
@@ -653,7 +665,7 @@ BOOL ToPoint::SetBindWeight(int pIdx, int bIdx, float weight)
 	return TRUE;
 }
 
-void ToPoint::Update()
+void ToShape::Update()
 {
 	NotifyDependents(FOREVER, PART_GEOM, REFMSG_CHANGE);
 	GetCOREInterface()->RedrawViews(GetCOREInterface()->GetTime());

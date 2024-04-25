@@ -1,36 +1,41 @@
 #include "BindPoints.h"
-#include "ToShape_Binds.h"
+#include "ToNode_Binds.h"
 
-#define TOSHAPE_CLASSID Class_ID(0x3ac543c5, 0x39f14454)
+#define TONODE_CLASSID Class_ID(0x59177a17, 0x739b4ff1)
 
 // version (now using global CURRENT_VERSION):
-// 1 - no baseTan or absolute members in ShapeBind
-// 2 - released for about 5 minutes until I figured out I
-//     wasn't saving the absolute member at all (oops)
-// 3 - save and load baseTan and absolute members (yay)
-// 4 - pblock as ref 0
-//#define SHAPE_VERSION		4
+// 1 - initial version
+// 4 - added pblock as ref 0 (skipped versions to get in sync)
+//#define NODE_VERSION		4
 
-class ToShape : public Modifier
+class ToNode : public Modifier
 {
 	public:
 		IParamBlock2* pblock;
 		Matrix3 thisTM;
 		Tab<INode*> nodes;
-		Tab<ShapePoint*> pointInfo;
+		Tab<Matrix3> baseTM;
+		Tab<NodePoint*> pointInfo;
 		int ver;
 
 		static IObjParam* ip;
 		static HWND hWnd;
 		HWND hAboutRollup;
 
-		ToShape();
-		virtual ~ToShape();
+		ToNode();
+		virtual ~ToNode();
 
-		Class_ID ClassID() { return TOSHAPE_CLASSID; }
+		Class_ID ClassID() { return TONODE_CLASSID; }
 		SClass_ID SuperClassID() { return OSM_CLASS_ID; }
-		void GetClassName(TSTR& s) { s = GetString(IDS_TOSHAPE_CLASSNAME); }
-		TCHAR *GetObjectName() { return GetString(IDS_TOSHAPE_CLASSNAME); }
+
+#if MAX_RELEASE_R24
+		void GetClassName(MSTR& s, bool localized) const override { s = GetString(IDS_TONODE_CLASSNAME); }
+		const TCHAR* GetObjectName(bool localized) { return GetString(IDS_TONODE_CLASSNAME); }
+#else
+		void GetClassName(TSTR& s) { s = GetString(IDS_TONODE_CLASSNAME); }
+		const TCHAR* GetObjectName() { return GetString(IDS_TONODE_CLASSNAME); }
+#endif
+
 		CreateMouseCallBack* GetCreateMouseCallBack() { return NULL; }
 		void DeleteThis() { delete this; }
 		void BeginEditParams(IObjParam *ip, ULONG flags,Animatable *prev);
@@ -40,8 +45,11 @@ class ToShape : public Modifier
 		int NumRefs();
 		RefTargetHandle GetReference(int i);
 		void SetReference(int i, RefTargetHandle rtarg);
-		RefResult NotifyRefChanged(	Interval changeInt, RefTargetHandle hTarget, PartID& partID,  RefMessage message);
-
+#if MAX_RELEASE_R17
+		virtual RefResult NotifyRefChanged(const Interval& changeInt, RefTargetHandle hTarget, PartID& partID, RefMessage message, BOOL propagate);
+#else
+		RefResult NotifyRefChanged(Interval changeInt, RefTargetHandle hTarget, PartID& partID, RefMessage message);
+#endif
 		int	NumParamBlocks() { return 1; }
 		IParamBlock2* GetParamBlock(int i) { return ((i == 0) ? pblock : NULL); }
 		IParamBlock2* GetParamBlockByID(BlockID id) { return ((pblock->ID() == id) ? pblock : NULL); }
@@ -58,9 +66,7 @@ class ToShape : public Modifier
 		void ModifyObject(TimeValue t, ModContext& mc, ObjectState* os, INode* node);
 
 
-		BOOL InterpCurveWorld(TimeValue t, int nodeIndex, int splineIndex, float lengthParam, Point3& basePos, Point3& baseTan);
-
-		BOOL AddNode(INode* thisNode, INode* shapeNode);
+		BOOL AddNode(INode* thisNode, INode* node);
 		BOOL RemoveNode(int i);
 		int GetNumNodes();
 		INode* GetNode(int i);
@@ -68,12 +74,12 @@ class ToShape : public Modifier
 		int GetNumPoints();
 		void SetNumPoints(int numBinds);
 
-		BOOL Bind(int pIdx, int nodeIndex, int splineIndex, float lengthParam, float weight, BOOL absolute);
-		BOOL UnBind(int pIdx, int bIdx);
-		int GetNumBinds(int pIdx);
-		BOOL GetBindInfo(int pIdx, int bIdx, int& nIdx, int& idx, float& lenParam, float& weight, BOOL& absolute);
-		float GetBindWeight(int pIdx, int bIdx);
-		BOOL SetBindWeight(int pIdx, int bIdx, float weight);
+		BOOL Bind(INode* thisNode, int pIdx, int nodeIndex, float weight);
+		BOOL UnBind(int vi, int bi);
+		int GetNumBinds(int vi);
+		BOOL GetBindInfo(int pIdx, int bIdx, int& nIdx, float& weight);
+		float GetBindWeight(int vi, int bi);
+		BOOL SetBindWeight(int vi, int bi, float weight);
 
 		void Update();
 		void UpdateUI();

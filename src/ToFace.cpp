@@ -22,6 +22,9 @@ public:
 	int 			IsPublic()						{ return 1; }
 	void *			Create(BOOL loading = FALSE)	{ return new ToFace(); }
 	const TCHAR *	ClassName()						{ return GetString(IDS_TOFACE_CLASSNAME); }
+#if MAX_RELEASE_R24
+	const TCHAR* NonLocalizedClassName() { return ClassName(); }
+#endif
 	SClass_ID		SuperClassID()					{ return OSM_CLASS_ID; }
 	Class_ID		ClassID()						{ return TOFACE_CLASSID; }
 	const TCHAR* 	Category()						{ return GetString(IDS_CATEGORY); }
@@ -33,6 +36,10 @@ static ToFaceClassDesc ToFaceDesc;
 ClassDesc2* GetToFaceDesc() { return &ToFaceDesc; }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
+
+#if MAX_RELEASE_R15
+#define end p_end
+#endif
 
 static ParamBlockDesc2 bind_param_blk
 (
@@ -189,11 +196,6 @@ ToFace::~ToFace()
 
 // Animatable /////////////////////////////////////////////////////////////////////////////////
 
-void ToFace::GetClassName(TSTR& s)
-{
-	s = GetString(IDS_TOFACE_CLASSNAME);
-}
-
 Class_ID ToFace::ClassID()
 {
 	return TOFACE_CLASSID;
@@ -263,9 +265,11 @@ int ToFace::RemapRefOnLoad(int iref)
 		return iref;
 }
 
-RefResult ToFace::NotifyRefChanged(
-	Interval changeInt, RefTargetHandle hTarget,
-	PartID& partID,  RefMessage message)
+#if MAX_RELEASE_R17
+RefResult ToFace::NotifyRefChanged(const Interval& changeInt, RefTargetHandle hTarget, PartID& partID, RefMessage message, BOOL propagate)
+#else
+RefResult ToFace::NotifyRefChanged(Interval changeInt, RefTargetHandle hTarget, PartID& partID, RefMessage message)
+#endif
 {
 	switch (message)
 	{
@@ -329,11 +333,6 @@ RefTargetHandle ToFace::Clone(RemapDir& remap)
 CreateMouseCallBack* ToFace::GetCreateMouseCallBack()
 {
 	return NULL;
-}
-
-TCHAR* ToFace::GetObjectName()
-{
-	return GetString(IDS_TOFACE_CLASSNAME);
 }
 
 // Modifier ///////////////////////////////////////////////////////////////////////////////////////
@@ -669,17 +668,17 @@ void ToFace::UpdateUI()
 		for (i=0; i<pCount; i++)
 			bCount += m_pointInfo[i]->binds.Count();
 
-		str.printf("%d", nCount);
+		str.printf(_T("%d"), nCount);
 		hTextWnd = GetDlgItem(m_hWnd,IDC_NUMNODES);
 		SetWindowText(hTextWnd, str);
 		str.Resize(0);
 
-		str.printf("%d", pCount);
+		str.printf(_T("%d"), pCount);
 		hTextWnd = GetDlgItem(m_hWnd,IDC_NUMPOINTS);
 		SetWindowText(hTextWnd, str);
 		str.Resize(0);
 
-		str.printf("%d", bCount);
+		str.printf(_T("%d"), bCount);
 		hTextWnd = GetDlgItem(m_hWnd,IDC_NUMBINDS);
 		SetWindowText(hTextWnd, str);
 

@@ -1,4 +1,4 @@
-//Microsoft Developer Studio generated resource script.
+// Microsoft Visual C++ generated resource script.
 //
 #include "resource.h"
 
@@ -13,26 +13,22 @@
 #undef APSTUDIO_READONLY_SYMBOLS
 
 /////////////////////////////////////////////////////////////////////////////
-// English (U.S.) resources
+// English (United States) resources
 
 #if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
-#ifdef _WIN32
 LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 #pragma code_page(1252)
-#endif //_WIN32
 
 /////////////////////////////////////////////////////////////////////////////
 //
 // Dialog
 //
 
-IDD_BIND DIALOG DISCARDABLE  0, 0, 108, 203
-STYLE WS_CHILD | WS_VISIBLE
+IDD_BIND DIALOG 0, 0, 108, 203
+STYLE DS_SETFONT | WS_CHILD | WS_VISIBLE
 FONT 8, "MS Sans Serif"
 BEGIN
-    LISTBOX         IDC_NODES,5,94,97,101,LBS_NOINTEGRALHEIGHT |
-                    LBS_DISABLENOSCROLL | WS_VSCROLL | WS_HSCROLL |
-                    WS_TABSTOP
+    LISTBOX         IDC_NODES,5,94,97,101,LBS_NOINTEGRALHEIGHT | LBS_DISABLENOSCROLL | WS_VSCROLL | WS_HSCROLL | WS_TABSTOP
     GROUPBOX        "Nodes:",IDC_NODES_GROUP,2,83,104,117
     GROUPBOX        "Bind Info:",IDC_BINDINFO_GROUP,2,32,104,47
     LTEXT           "Num Points:",IDC_NUMPOINTS_LABEL,6,54,40,8
@@ -45,25 +41,23 @@ BEGIN
     GROUPBOX        "Options:",IDC_BINDINFO_GROUP2,2,0,104,28
     LTEXT           "Num Nodes:",IDC_NUMNODES_LABEL,6,43,40,8
     RTEXT           "99999999",IDC_NUMNODES,49,43,51,8
-    CONTROL         "Show Influence",IDC_CHECK1,"Button",BS_AUTOCHECKBOX |
-                    NOT WS_VISIBLE | WS_DISABLED | WS_TABSTOP,27,79,64,8
+    CONTROL         "Show Influence",IDC_CHECK1,"Button",BS_AUTOCHECKBOX | NOT WS_VISIBLE | WS_DISABLED | WS_TABSTOP,27,79,64,8
 END
 
-IDD_ABOUT_FOO DIALOGEX 0, 0, 108, 58
-STYLE WS_CHILD | WS_VISIBLE
+IDD_ABOUT_FOO DIALOGEX 0, 0, 108, 74
+STYLE DS_SETFONT | WS_CHILD | WS_VISIBLE
 FONT 8, "MS Sans Serif", 0, 0, 0x1
 BEGIN
     GROUPBOX        "",IDC_STATIC,2,0,104,55
     RTEXT           "0000.00.00",IDC_ABOUT_VERSION,62,27,37,8
-    PUSHBUTTON      "www.fooTOOLS.com",IDC_ABOUT_WEB,6,38,96,13,BS_CENTER |
-                    NOT WS_TABSTOP,WS_EX_STATICEDGE
-    LTEXT           "Version ..............",IDC_STATIC,7,27,54,8
-    CONTROL         101,IDC_STATIC,"Static",SS_BITMAP | SS_REALSIZEIMAGE |
-                    SS_SUNKEN,25,8,57,17
+    PUSHBUTTON      "www.fooTOOLS.com",IDC_ABOUT_WEB,6,38,96,13,BS_CENTER | NOT WS_TABSTOP,WS_EX_STATICEDGE
+    LTEXT           "Version ............",IDC_STATIC,7,27,51,8
+    CONTROL         IDD_TOFACE,IDC_STATIC,"Static",SS_BITMAP | SS_REALSIZEIMAGE | SS_SUNKEN,25,8,57,17
+    CTEXT           "3ds Max 2017+ Builds:\nJosef 'spacefrog' Wienerroither",IDC_STATIC,0,54,108,18
 END
 
-IDD_ABOUT_BFD DIALOG DISCARDABLE  0, 0, 108, 28
-STYLE WS_CHILD | WS_VISIBLE
+IDD_ABOUT_BFD DIALOG 0, 0, 108, 28
+STYLE DS_SETFONT | WS_CHILD | WS_VISIBLE
 FONT 8, "MS Sans Serif"
 BEGIN
     GROUPBOX        "",-1,2,0,104,26
@@ -78,18 +72,18 @@ END
 // TEXTINCLUDE
 //
 
-1 TEXTINCLUDE DISCARDABLE
+1 TEXTINCLUDE 
 BEGIN
     "resource.h\0"
 END
 
-2 TEXTINCLUDE DISCARDABLE
+2 TEXTINCLUDE 
 BEGIN
     "#include ""afxres.h""\r\n"
     "\0"
 END
 
-3 TEXTINCLUDE DISCARDABLE
+3 TEXTINCLUDE 
 BEGIN
     "\r\n"
     "\0"
@@ -98,7 +92,6 @@ END
 #endif    // APSTUDIO_INVOKED
 
 
-#ifndef _MAC
 /////////////////////////////////////////////////////////////////////////////
 //
 // Version
@@ -121,16 +114,13 @@ BEGIN
     BEGIN
         BLOCK "040904b0"
         BEGIN
-            VALUE "CompanyName", "\0"
-            VALUE "FileVersion", "3.0.0.0\0"
-            VALUE "InternalName", "BindPoints\0"
-            VALUE "LegalCopyright", "\0"
-            VALUE "OriginalFilename", "BindPoints.dlm\0"
-            VALUE "ProductName", "3D Studio MAX\0"
-            VALUE "ProductVersion", "3.0.0.0\0"
-            VALUE "FileDescription", "Bind Points To An Object\0"
-            VALUE "Comments", "TECH: \0"
-            VALUE "LegalTrademarks", "\0"
+            VALUE "FileVersion", "3.0.0.0"
+            VALUE "InternalName", "BindPoints"
+            VALUE "OriginalFilename", "BindPoints.dlm"
+            VALUE "ProductName", "3D Studio MAX"
+            VALUE "ProductVersion", "3.0.0.0"
+            VALUE "FileDescription", "Bind Points To An Object"
+            VALUE "Comments", "TECH: "
         END
     END
     BLOCK "VarFileInfo"
@@ -139,15 +129,14 @@ BEGIN
     END
 END
 
-#endif    // !_MAC
-
 
 /////////////////////////////////////////////////////////////////////////////
 //
 // Bitmap
 //
 
-IDB_FOOTOOLS            BITMAP  DISCARDABLE     "fooTOOLS_blue.bmp"
+IDB_FOOTOOLS            BITMAP                  "res/fooTOOLS_blue.bmp"
+
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -155,11 +144,11 @@ IDB_FOOTOOLS            BITMAP  DISCARDABLE     "fooTOOLS_blue.bmp"
 //
 
 #ifdef APSTUDIO_INVOKED
-GUIDELINES DESIGNINFO DISCARDABLE
+GUIDELINES DESIGNINFO
 BEGIN
     IDD_ABOUT_FOO, DIALOG
     BEGIN
-        BOTTOMMARGIN, 33
+        BOTTOMMARGIN, 49
     END
 
     IDD_ABOUT_BFD, DIALOG
@@ -172,10 +161,27 @@ END
 
 /////////////////////////////////////////////////////////////////////////////
 //
+// AFX_DIALOG_LAYOUT
+//
+
+IDD_ABOUT_FOO AFX_DIALOG_LAYOUT
+BEGIN
+    0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 100, 100
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
 // String Table
 //
 
-STRINGTABLE DISCARDABLE
+STRINGTABLE
 BEGIN
     IDS_LIBDESCRIPTION      "Bind Points To An Object"
     IDS_PARAMS              "Parameters"
@@ -189,7 +195,7 @@ BEGIN
     IDS_TOFACE_CLASSNAME    "BindToFace"
 END
 
-STRINGTABLE DISCARDABLE
+STRINGTABLE
 BEGIN
     IDS_BINDNODE            "Bound To Node"
     IDS_NOTBINDERROR        "Not A Bind Modifier"
@@ -204,16 +210,16 @@ BEGIN
     IDS_TOSHAPE_NAME        "Bind To Shape"
     IDS_TONODE_NAME         "Bind To Node"
     IDS_STRENGTH            "Strength"
-    IDS_VERSION             "2007.02.20"
+    IDS_VERSION             "2025.02.01"
     IDS_CATEGORY_BFD        "BFDtools"
 END
 
-STRINGTABLE DISCARDABLE
+STRINGTABLE
 BEGIN
     IDS_CATEGORY_FOO        "fooTOOLS"
 END
 
-#endif    // English (U.S.) resources
+#endif    // English (United States) resources
 /////////////////////////////////////////////////////////////////////////////
 
 

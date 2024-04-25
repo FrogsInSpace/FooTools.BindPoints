@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>17.0</VCProjectVersion>
+    <ProjectGuid>{D21A5039-1E6C-47DC-A1C7-EE83A47EF90D}</ProjectGuid>
+    <RootNamespace>BindPoints</RootNamespace>
+    <ConfigurationType>DynamicLibrary</ConfigurationType>	
+  </PropertyGroup>
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Hybrid-Max2025|x64">
+      <Configuration>Hybrid-Max2025</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release-Max2026|x64">
+      <Configuration>Release-Max2026</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release-Max2025|x64">
+      <Configuration>Release-Max2025</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release-Max2024|x64">
+      <Configuration>Release-Max2024</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release-Max2023|x64">
+      <Configuration>Release-Max2023</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release-Max2022|x64">
+      <Configuration>Release-Max2022</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release-Max2021|x64">
+      <Configuration>Release-Max2021</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release-Max2020|x64">
+      <Configuration>Release-Max2020</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release-Max2019|x64">
+      <Configuration>Release-Max2019</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release-Max2018|x64">
+      <Configuration>Release-Max2018</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release-Max2017|x64">
+      <Configuration>Release-Max2017</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(ProjectDir)propertysheets\MaxSDKSetup.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+    <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup>
+    <TargetName>$(ProjectName)_$(MaxSDKRelease)_$(PlatformTarget)</TargetName>
+    <TargetExt>.dlm</TargetExt>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="$(Configuration.Contains('Release'))">
+    <Midl>
+      <TargetEnvironment>X64</TargetEnvironment>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+    </Midl>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(MaxSDKPath)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>MAX64;CUSTOM_MFC;WIN32;_WINDOWS;SHELL32LIB;UNICODE;_UNICODE;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
+      <StringPooling>true</StringPooling>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <DebugInformationFormat>None</DebugInformationFormat>
+      <WarningLevel>Level3</WarningLevel>
+      <TreatWarningAsError>false</TreatWarningAsError>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <CompileAs>Default</CompileAs>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>NDEBUG;SHELL32LIB%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
+    <Link>
+      <AdditionalDependencies>maxscrpt.lib;MNMath.lib;poly.lib;bmm.lib;core.lib;geom.lib;mesh.lib;maxutil.lib;paramblk2.lib;comctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(MaxSdkLib);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <ModuleDefinitionFile>./src/BindPoints.def</ModuleDefinitionFile>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <DataExecutionPrevention>
+      </DataExecutionPrevention>
+      <TargetMachine>MachineX64</TargetMachine>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <SubSystem>Windows</SubSystem>
+      <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="$(Configuration.Contains('Hybrid')) OR $(Configuration.Contains('Debug'))">
+    <Midl>
+      <TargetEnvironment>X64</TargetEnvironment>
+    </Midl>
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>$(MaxSDKPath)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <!--<UndefinePreprocessorDefinitions>DEFINE_TO_UNDEFINE;%(UndefinePreprocessorDefinitions)</UndefinePreprocessorDefinitions>-->
+      <PreprocessorDefinitions>MAX64;CUSTOM_MFC;WIN32;_WINDOWS;SHELL32LIB;UNICODE;_UNICODE;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <BrowseInformation>true</BrowseInformation>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <Culture>0x0c09</Culture>
+    </ResourceCompile>
+    <Link>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <AdditionalDependencies>maxscrpt.lib;MNMath.lib;poly.lib;bmm.lib;core.lib;geom.lib;mesh.lib;maxutil.lib;paramblk2.lib;comctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(MaxSdkLib);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <ModuleDefinitionFile>./src/BindPoints.def</ModuleDefinitionFile>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <TargetMachine>MachineX64</TargetMachine>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Windows</SubSystem>
+      <SetChecksum>true</SetChecksum>
+      <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
+      <!-- Clear private debug symbol setting that gets set by Max SDK's property sheet -->
+      <StripPrivateSymbols>
+      </StripPrivateSymbols>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup>
+    <!-- clear RunMUIRCT postbuild event -->
+    <PostBuildEvent>
+      <Command>
+      </Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="src/BindOps.cpp" />
+    <ClCompile Include="src/DllEntry.cpp" />
+    <ClCompile Include="src/ToFace.cpp" />
+    <ClCompile Include="src/ToNode.cpp" />
+    <ClCompile Include="src/ToPoint.cpp" />
+    <ClCompile Include="src/ToShape.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="docs\BindPoints_README.html" />
+    <None Include="docs\BindPoints_Samples.ms" />
+    <None Include="docs\ConvertSkinToBind.ms" />
+    <None Include="src/BindPoints.def" />
+    <None Include="tests/BindTest.ms" />
+    <None Include="tests/BindToShapePrototype.ms" />
+    <None Include="src/res/fooTOOLS_blue.bmp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src/AboutRollup.h" />
+    <ClInclude Include="src/BindPoints.h" />
+    <ClInclude Include="src/resource.h" />
+    <ClInclude Include="src/ToFace.h" />
+    <ClInclude Include="src/ToFace_Binds.h" />
+    <ClInclude Include="src/ToNode.h" />
+    <ClInclude Include="src/ToNode_Binds.h" />
+    <ClInclude Include="src/ToPoint.h" />
+    <ClInclude Include="src/ToPoint_Binds.h" />
+    <ClInclude Include="src/ToShape.h" />
+    <ClInclude Include="src/ToShape_Binds.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="src/BindPoints.rc" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

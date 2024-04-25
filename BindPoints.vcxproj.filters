@@ -1,0 +1,61 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="res">
+      <UniqueIdentifier>{8d47aca9-77c2-4711-aa06-dd506042f7d7}</UniqueIdentifier>
+      <Extensions>ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe</Extensions>
+    </Filter>
+    <Filter Include="Docs">
+      <UniqueIdentifier>{2fca34dd-6554-4a54-965c-550cca492e46}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Scripts">
+      <UniqueIdentifier>{d9b66c8f-41f8-47e0-aa40-862842aa5ff3}</UniqueIdentifier>
+      <Extensions>*.ms; *.mcr</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src/BindOps.cpp" />
+    <ClCompile Include="src/DllEntry.cpp" />
+    <ClCompile Include="src/ToFace.cpp" />
+    <ClCompile Include="src/ToNode.cpp" />
+    <ClCompile Include="src/ToPoint.cpp" />
+    <ClCompile Include="src/ToShape.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src/AboutRollup.h" />
+    <ClInclude Include="src/BindPoints.h" />
+    <ClInclude Include="src/resource.h" />
+    <ClInclude Include="src/ToFace.h" />
+    <ClInclude Include="src/ToFace_Binds.h" />
+    <ClInclude Include="src/ToNode.h" />
+    <ClInclude Include="src/ToNode_Binds.h" />
+    <ClInclude Include="src/ToPoint.h" />
+    <ClInclude Include="src/ToPoint_Binds.h" />
+    <ClInclude Include="src/ToShape.h" />
+    <ClInclude Include="src/ToShape_Binds.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="src/BindPoints.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="src/BindPoints.def" />
+    <None Include="src/res/fooTOOLS_blue.bmp">
+      <Filter>res</Filter>
+    </None>
+    <None Include="tests/BindTest.ms">
+      <Filter>Scripts</Filter>
+    </None>
+    <None Include="tests/BindToShapePrototype.ms">
+      <Filter>Scripts</Filter>
+    </None>
+    <None Include="docs\BindPoints_README.html">
+      <Filter>Docs</Filter>
+    </None>
+    <None Include="docs\ConvertSkinToBind.ms">
+      <Filter>Docs</Filter>
+    </None>
+    <None Include="docs\BindPoints_Samples.ms">
+      <Filter>Docs</Filter>
+    </None>
+  </ItemGroup>
+</Project>

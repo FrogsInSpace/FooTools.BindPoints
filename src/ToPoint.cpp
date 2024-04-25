@@ -1,8 +1,8 @@
 /**********************************************************************
  *<
-	FILE: ToNode.cpp
+	FILE: ToPoint.cpp
 
-	DESCRIPTION:	Bind points on one object to object transforms.
+	DESCRIPTION:	Bind points on one object to points on another.
 
 	CREATED BY:
 
@@ -11,28 +11,36 @@
  *>	Copyright (c) 1997, All Rights Reserved.
  **********************************************************************/
 
-#include "ToNode.h"
+#include "ToPoint.h"
 #include "AboutRollup.h"
 
-class ToNodeClassDesc : public ClassDesc2 {
+class ToPointClassDesc : public ClassDesc2 {
 	public:
-		int 			IsPublic() { return 1; }
-		void *			Create(BOOL loading = FALSE) { return new ToNode(); }
-		const TCHAR *	ClassName() { return GetString(IDS_TONODE_CLASSNAME); }
-		SClass_ID		SuperClassID() { return OSM_CLASS_ID; }
-		Class_ID		ClassID() { return TONODE_CLASSID; }
-		const TCHAR* 	Category() { return GetString(IDS_CATEGORY); }
-		const TCHAR*	InternalName() { return _T("BindToNode"); }
+		int 			IsPublic() {return 1;}
+		void *			Create(BOOL loading = FALSE) {return new ToPoint();}
+		const TCHAR* ClassName() { return GetString(IDS_TOPOINT_CLASSNAME); }
+#if MAX_RELEASE_R24
+		const TCHAR* NonLocalizedClassName() { return ClassName(); }
+#endif
+
+		SClass_ID		SuperClassID() {return OSM_CLASS_ID;}
+		Class_ID		ClassID() {return TOPOINT_CLASSID;}
+		const TCHAR* 	Category() {return GetString(IDS_CATEGORY);}
+		const TCHAR*	InternalName() { return _T("BindToPoint"); }
 		HINSTANCE		HInstance() { return hInstance; }
 };
 
-static ToNodeClassDesc ToNodeDesc;
-ClassDesc2* GetToNodeDesc() { return &ToNodeDesc; }
+static ToPointClassDesc ToPointDesc;
+ClassDesc2* GetToPointDesc() { return &ToPointDesc; }
 
-IObjParam* ToNode::ip = NULL;
-HWND ToNode::hWnd = NULL;
+IObjParam* ToPoint::ip = NULL;
+HWND ToPoint::hWnd = NULL;
 
-static ParamBlockDesc2 bind_param_blk ( bind_params, _T("Parameters"),  0, &ToNodeDesc,
+#if MAX_RELEASE_R15
+#define end p_end
+#endif
+
+static ParamBlockDesc2 bind_param_blk ( bind_params, _T("Parameters"),  0, &ToPointDesc,
 	P_AUTO_CONSTRUCT + P_AUTO_UI, PBLOCK_REF,
 	//rollout
 	IDD_BIND, IDS_PARAMS, 0, 0, NULL,
@@ -45,12 +53,12 @@ static ParamBlockDesc2 bind_param_blk ( bind_params, _T("Parameters"),  0, &ToNo
 	end
 );
 
-class ToNodeParamMapDlgProc : public ParamMap2UserDlgProc {
+class ToPointParamMapDlgProc : public ParamMap2UserDlgProc {
 	public:
-		ToNode *tn;
+		ToPoint *tp;
 
-		ToNodeParamMapDlgProc(ToNode *mod) { tn = mod; }
-		void Update(TimeValue t) { if (tn) tn->UpdateUI(); }
+		ToPointParamMapDlgProc(ToPoint *mod) { tp = mod; }
+		void Update(TimeValue t) { if (tp) tp->UpdateUI(); }
 #if (MAX_RELEASE >= 9000)
 		INT_PTR DlgProc(TimeValue t,IParamMap2 *map,HWND hWnd,UINT msg,WPARAM wParam,LPARAM lParam);
 #else
@@ -60,27 +68,27 @@ class ToNodeParamMapDlgProc : public ParamMap2UserDlgProc {
 };
 
 #if (MAX_RELEASE >= 9000)
-INT_PTR ToNodeParamMapDlgProc::DlgProc(TimeValue t, IParamMap2* map, HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+INT_PTR ToPointParamMapDlgProc::DlgProc(TimeValue t, IParamMap2* map, HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 #else
-BOOL ToNodeParamMapDlgProc::DlgProc(TimeValue t, IParamMap2* map, HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+BOOL ToPointParamMapDlgProc::DlgProc(TimeValue t, IParamMap2* map, HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 #endif
 {
 	switch (msg)
 	{
-		case WM_INITDIALOG:
+		case WM_INITDIALOG :
 		{
-			tn->hWnd = hWnd;
+			tp->hWnd = hWnd;
 
 			// Update everything else...
-			tn->UpdateUI();
+			tp->UpdateUI();
 			break;
 		}
 		case WM_PAINT:
 		{
 			break;
 		}
-		case WM_DESTROY:
-			tn->hWnd = NULL;
+		case WM_DESTROY :
+			tp->hWnd = NULL;
 			break;
 	}
 	return FALSE;
@@ -88,24 +96,23 @@ BOOL ToNodeParamMapDlgProc::DlgProc(TimeValue t, IParamMap2* map, HWND hWnd, UIN
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 
-ToNode::ToNode()
+ToPoint::ToPoint()
 {
 
 #if MAX_RELEASE >= 9000
 	pblock = NULL;	//set reference to NULL
 #endif
 
-	ToNodeDesc.MakeAutoParamBlocks(this);
+	ToPointDesc.MakeAutoParamBlocks(this);
 
 	thisTM.IdentityMatrix();
 	nodes.ZeroCount();
-	baseTM.ZeroCount();
 	pointInfo.ZeroCount();
 	ver = CURRENT_VERSION;
 	hAboutRollup = NULL;
 }
 
-ToNode::~ToNode()
+ToPoint::~ToPoint()
 {
 	for (int i=0; i<pointInfo.Count(); i++)
 		delete pointInfo[i];
@@ -113,24 +120,24 @@ ToNode::~ToNode()
 	DeleteAllRefsFromMe();
 }
 
-void ToNode::BeginEditParams( IObjParam *ip, ULONG flags,Animatable *prev )
+void ToPoint::BeginEditParams( IObjParam *ip, ULONG flags,Animatable *prev )
 {
 	this->ip = ip;
 
-	ToNodeDesc.BeginEditParams(ip, this, flags, prev);
-	bind_param_blk.SetUserDlgProc(new ToNodeParamMapDlgProc(this));
+	ToPointDesc.BeginEditParams(ip, this, flags, prev);
+	bind_param_blk.SetUserDlgProc(new ToPointParamMapDlgProc(this));
 	hAboutRollup = ip->AddRollupPage(hInstance, MAKEINTRESOURCE(IDD_ABOUT), aboutDlgProc, _T("About"));
 }
 
-void ToNode::EndEditParams( IObjParam *ip, ULONG flags,Animatable *next)
+void ToPoint::EndEditParams( IObjParam *ip, ULONG flags,Animatable *next )
 {
-	ToNodeDesc.EndEditParams(ip, this, flags, next);
+	ToPointDesc.EndEditParams(ip, this, flags, next);
 	ip->DeleteRollupPage(hAboutRollup);
 
 	this->ip = NULL;
 }
 
-void ToNode::UpdateUI()
+void ToPoint::UpdateUI()
 {
 	if (hWnd)
 	{
@@ -145,17 +152,17 @@ void ToNode::UpdateUI()
 		for (i=0; i<pCount; i++)
 			bCount += pointInfo[i]->binds.Count();
 
-		str.printf("%d", nCount);
+		str.printf(_T("%d"), nCount);
 		hTextWnd = GetDlgItem(hWnd,IDC_NUMNODES);
 		SetWindowText(hTextWnd, str);
 		str.Resize(0);
 
-		str.printf("%d", pCount);
+		str.printf(_T("%d"), pCount);
 		hTextWnd = GetDlgItem(hWnd,IDC_NUMPOINTS);
 		SetWindowText(hTextWnd, str);
 		str.Resize(0);
 
-		str.printf("%d", bCount);
+		str.printf(_T("%d"), bCount);
 		hTextWnd = GetDlgItem(hWnd,IDC_NUMBINDS);
 		SetWindowText(hTextWnd, str);
 
@@ -168,12 +175,12 @@ void ToNode::UpdateUI()
 	}
 }
 
-int ToNode::NumRefs()
+int ToPoint::NumRefs()
 {
 	return (NUM_REFS + nodes.Count());
 }
 
-RefTargetHandle ToNode::GetReference(int i)
+RefTargetHandle ToPoint::GetReference(int i)
 {
 	if (i == PBLOCK_REF)
 		return pblock;
@@ -181,7 +188,7 @@ RefTargetHandle ToNode::GetReference(int i)
 		return nodes[i-NUM_REFS];
 }
 
-void ToNode::SetReference(int i, RefTargetHandle rtarg)
+void ToPoint::SetReference(int i, RefTargetHandle rtarg)
 {
 	if (i == PBLOCK_REF)
 		pblock = (IParamBlock2*)rtarg;
@@ -189,9 +196,11 @@ void ToNode::SetReference(int i, RefTargetHandle rtarg)
 		nodes[i-NUM_REFS] = (INode*)rtarg;
 }
 
-RefResult ToNode::NotifyRefChanged(
-	Interval changeInt, RefTargetHandle hTarget,
-	PartID& partID,  RefMessage message)
+#if MAX_RELEASE_R17
+RefResult ToPoint::NotifyRefChanged(const Interval& changeInt, RefTargetHandle hTarget, PartID& partID,	RefMessage message, BOOL propagate)
+#else
+RefResult ToPoint::NotifyRefChanged(Interval changeInt,	RefTargetHandle hTarget, PartID& partID,	RefMessage message)
+#endif
 {
 	switch (message)
 	{
@@ -207,9 +216,9 @@ RefResult ToNode::NotifyRefChanged(
 	return REF_SUCCEED;
 }
 
-RefTargetHandle ToNode::Clone(RemapDir& remap)
+RefTargetHandle ToPoint::Clone(RemapDir& remap)
 {
-	ToNode* newmod = new ToNode();
+	ToPoint* newmod = new ToPoint();
 
 	newmod->ReplaceReference(PBLOCK_REF, pblock->Clone(remap));
 
@@ -221,24 +230,21 @@ RefTargetHandle ToNode::Clone(RemapDir& remap)
 		newmod->ReplaceReference(i+NUM_REFS, nodes[i]);
 	}
 
-	newmod->baseTM.SetCount(baseTM.Count());
-	for (int i=0; i < baseTM.Count(); i++)
-		newmod->baseTM[i] = baseTM[i];
-
 	int pointCount = pointInfo.Count();
 	newmod->pointInfo.SetCount(pointCount);
 	for (int pIdx=0; pIdx<pointCount; pIdx++)
 	{
 		int bindCount = pointInfo[pIdx]->binds.Count();
 
-		newmod->pointInfo[pIdx] = new NodePoint;
+		newmod->pointInfo[pIdx] = new PointPoint;
 		newmod->pointInfo[pIdx]->binds.SetCount(bindCount);
 
 		for (int bIdx=0; bIdx<bindCount; bIdx++)
 		{
-			NodeBind* b = new NodeBind;
+			PointBind* b = new PointBind;
 			b->basePos		= pointInfo[pIdx]->binds[bIdx]->basePos;
 			b->nodeIndex	= pointInfo[pIdx]->binds[bIdx]->nodeIndex;
+			b->pointIndex	= pointInfo[pIdx]->binds[bIdx]->pointIndex;
 			b->weight		= pointInfo[pIdx]->binds[bIdx]->weight;
 			newmod->pointInfo[pIdx]->binds[bIdx] = b;
 		}
@@ -253,17 +259,18 @@ RefTargetHandle ToNode::Clone(RemapDir& remap)
 
 #define VERSION_CHUNK		0x0000
 #define THISTM_CHUNK		0x0001
-#define NUMNODES_CHUNK		0x0002
-#define BASETM_CHUNK		0x0003
-#define POINTINFO_CHUNK		0x0004
+#define BINDINDEX_CHUNK		0x0002 // obsolete
+#define BASEPOINT_CHUNK		0x0003 // obsolete
+#define NUMNODES_CHUNK		0x0004
+#define POINTINFO_CHUNK		0x0005
 
-IOResult ToNode::Save(ISave *isave)
+IOResult ToPoint::Save(ISave *isave)
 {
 	ULONG nb;
 	IOResult res;
 
 	res = Modifier::Save(isave);
-    if (res != IO_OK) return res;
+	if (res != IO_OK) return res;
 
 	ver = CURRENT_VERSION;
 	isave->BeginChunk(VERSION_CHUNK);
@@ -279,13 +286,6 @@ IOResult ToNode::Save(ISave *isave)
 	isave->Write(&numNodes, sizeof(int), &nb);
 	isave->EndChunk();
 
-	for (int i=0; i<numNodes; i++)
-	{
-		isave->BeginChunk(BASETM_CHUNK);
-		baseTM[i].Save(isave);
-		isave->EndChunk();
-	}
-
 	int pointCount = pointInfo.Count();
 	if (pointCount)
 	{
@@ -300,6 +300,7 @@ IOResult ToNode::Save(ISave *isave)
 			{
 				isave->Write(&pointInfo[pIdx]->binds[bIdx]->basePos, sizeof(Point3), &nb);
 				isave->Write(&pointInfo[pIdx]->binds[bIdx]->nodeIndex, sizeof(int), &nb);
+				isave->Write(&pointInfo[pIdx]->binds[bIdx]->pointIndex, sizeof(int), &nb);
 				isave->Write(&pointInfo[pIdx]->binds[bIdx]->weight, sizeof(float), &nb);
 			}
 		}
@@ -310,16 +311,15 @@ IOResult ToNode::Save(ISave *isave)
 	return IO_OK;
 }
 
-IOResult ToNode::Load(ILoad *iload)
+IOResult ToPoint::Load(ILoad *iload)
 {
 	ULONG nb;
 	IOResult res;
 
-    res = Modifier::Load(iload);
+	res = Modifier::Load(iload);
     if (res != IO_OK) return res;
 
 	int numNodes = 0;
-	int cnt = 0;
 
 	while (IO_OK==(res=iload->OpenChunk()))
 	{
@@ -329,20 +329,14 @@ IOResult ToNode::Load(ILoad *iload)
 				iload->Read(&ver,sizeof(int), &nb);
 				break;
 			}
-			case THISTM_CHUNK:
+			case THISTM_CHUNK: {
 				thisTM.Load(iload);
 				break;
+			}
 			case NUMNODES_CHUNK: {
 				iload->Read(&numNodes,sizeof(int), &nb);
 				nodes.SetCount(numNodes);
-				baseTM.SetCount(numNodes);
 				for (int i=0; i<numNodes; i++) nodes[i] = NULL;
-				break;
-			}
-			case BASETM_CHUNK: {
-				assert(numNodes); // numNodes should always be non-zero if we get here
-				baseTM[cnt].Load(iload);
-				cnt++;
 				break;
 			}
 			case POINTINFO_CHUNK:
@@ -353,7 +347,7 @@ IOResult ToNode::Load(ILoad *iload)
 
 				for (int pIdx=0; pIdx<pointCount; pIdx++)
 				{
-					pointInfo[pIdx] = new NodePoint;
+					pointInfo[pIdx] = new PointPoint;
 
 					int bindCount;
 					iload->Read(&bindCount, sizeof(int), &nb);
@@ -361,18 +355,71 @@ IOResult ToNode::Load(ILoad *iload)
 
 					for (int bIdx=0; bIdx<bindCount; bIdx++)
 					{
-						NodeBind* b = new NodeBind;
+						PointBind* b = new PointBind;
 						iload->Read(&b->basePos, sizeof(Point3), &nb);
 						iload->Read(&b->nodeIndex, sizeof(int), &nb);
+						iload->Read(&b->pointIndex, sizeof(int), &nb);
 						iload->Read(&b->weight, sizeof(float), &nb);
+
+						if (b->pointIndex == -1) // check if it's a "null" bind from old version
+						{
+							b->pointIndex = 0;
+							b->weight = 0.0;
+						}
+
 						pointInfo[pIdx]->binds[bIdx] = b;
 					}
+				}
+				break;
+			}
+			case BINDINDEX_CHUNK:
+			{
+				// make room for the one bind object
+				nodes.SetCount(1);
+				nodes[0] = NULL;
+
+				// set point count to number of binds
+				int pointCount;
+				iload->Read(&pointCount, sizeof(int), &nb);
+				pointInfo.SetCount(pointCount);
+
+				// make initial binds (one for each point), setting everything
+				// except the bindCoords (which are loaded later)
+				for (int pIdx=0; pIdx<pointCount; pIdx++)
+				{
+					pointInfo[pIdx] = new PointPoint;
+					pointInfo[pIdx]->binds.SetCount(1);
+					PointBind* b = new PointBind;
+
+					iload->Read(&b->pointIndex, sizeof(int), &nb);
+					if (b->pointIndex == -1) // check if it's a "null" bind from old version
+					{
+						b->pointIndex = 0;
+						b->weight = 0.0;
+					} else {
+						b->weight = 1.0;
+					}
+
+					b->nodeIndex = 0;
+					pointInfo[pIdx]->binds[0] = b;
+				}
+				break;
+			}
+			case BASEPOINT_CHUNK:
+			{
+				// finish setting up the binds for each point
+				int pointCount;
+				iload->Read(&pointCount, sizeof(int), &nb);
+
+				for (int pIdx=0; pIdx<pointCount; pIdx++)
+				{
+					iload->Read(&pointInfo[pIdx]->binds[0]->basePos, sizeof(Point3), &nb);
 				}
 
 				break;
 			}
 		}
-		res = iload->CloseChunk();
+		iload->CloseChunk();
 		if (res!=IO_OK)
 			return res;
 	}
@@ -380,15 +427,15 @@ IOResult ToNode::Load(ILoad *iload)
 	return IO_OK;
 }
 
-int ToNode::RemapRefOnLoad(int iref)
+int ToPoint::RemapRefOnLoad(int iref)
 {
-	if (ver<2)
+	if (ver<4)
 		return (iref+NUM_REFS);
 	else
 		return iref;
 }
 
-Interval ToNode::LocalValidity(TimeValue t)
+Interval ToPoint::LocalValidity(TimeValue t)
 {
 	if (TestAFlag(A_MOD_BEING_EDITED))
 		return NEVER;
@@ -396,14 +443,18 @@ Interval ToNode::LocalValidity(TimeValue t)
 	Interval valid = FOREVER;
 
 	for (int i=0; i<nodes.Count(); i++)
+	{
+		ObjectState os = nodes[i]->EvalWorldState(t);
+		valid &= os.obj->ObjectValidity(t);
 		nodes[i]->GetNodeTM(t, &valid);
+	}
 
 	pblock->GetValidity(t, valid);
 
 	return valid;
 }
 
-void ToNode::ModifyObject(TimeValue t, ModContext &mc, ObjectState * os, INode *node)
+void ToPoint::ModifyObject(TimeValue t, ModContext &mc, ObjectState * os, INode *node)
 {
 	if (!nodes.Count()) return;
 
@@ -413,12 +464,10 @@ void ToNode::ModifyObject(TimeValue t, ModContext &mc, ObjectState * os, INode *
 	Matrix3 iThisTM = Inverse(thisTM);
 	float strength = pblock->GetFloat(pb_strength, t);
 
-	Tab<Matrix3> offsetTM;
-	offsetTM.SetCount(baseTM.Count());
-	for (int i=0; i<baseTM.Count(); i++) {
-		Matrix3 m = Inverse(baseTM[i]);
-		offsetTM[i] = m * nodes[i]->GetObjectTM(t);
-	}
+	Tab<Object*> nodeObjs;
+	nodeObjs.SetCount(nodes.Count());
+	for (int i=0; i<nodes.Count(); i++)
+		nodeObjs[i] = (nodes[i]->EvalWorldState(t)).obj;
 
 	for (int pIdx=0; pIdx<numPoints; pIdx++)
 	{
@@ -427,12 +476,15 @@ void ToNode::ModifyObject(TimeValue t, ModContext &mc, ObjectState * os, INode *
 			Point3 thisP = os->obj->GetPoint(pIdx) * thisTM;
 			Point3 offset(0.0f, 0.0f, 0.0f);
 
-			int numBinds = GetNumBinds(pIdx);
-			for (int bIdx=0; bIdx<numBinds; bIdx++)
+			for (int bIdx=0; bIdx<GetNumBinds(pIdx); bIdx++)
 			{
-				NodeBind* b = pointInfo[pIdx]->binds[bIdx];
+				PointBind* b = pointInfo[pIdx]->binds[bIdx];
 
-				offset += (thisP * offsetTM[b->nodeIndex] - thisP) * b->weight * strength;
+				if (b->pointIndex < nodeObjs[b->nodeIndex]->NumPoints())
+				{
+					Point3 newP = nodeObjs[b->nodeIndex]->GetPoint(b->pointIndex) * nodes[b->nodeIndex]->GetObjectTM(t);
+					offset += (newP - b->basePos) * b->weight * strength;
+				}
 			}
 
 			if (os->obj->GetSubselState() != 0)
@@ -448,18 +500,20 @@ void ToNode::ModifyObject(TimeValue t, ModContext &mc, ObjectState * os, INode *
 	os->obj->PointsWereChanged();
 }
 
-int ToNode::GetNumPoints()
+//////////////////////////////////////////////////////////////////////////////////////////////
+
+int ToPoint::GetNumPoints()
 {
 	return pointInfo.Count();
 }
 
-void ToNode::SetNumPoints(int numBinds)
+void ToPoint::SetNumPoints(int numBinds)
 {
 	if (numBinds > pointInfo.Count())
 	{
 		for (int i=pointInfo.Count(); i<numBinds; i++)
 		{
-			NodePoint* p = new NodePoint;
+			PointPoint* p = new PointPoint;
 			pointInfo.Append(1, &p);
 		}
 	} else {
@@ -470,7 +524,7 @@ void ToNode::SetNumPoints(int numBinds)
 	UpdateUI();
 }
 
-BOOL ToNode::AddNode(INode* thisNode, INode* node)
+BOOL ToPoint::AddNode(INode* thisNode, INode* node)
 {
 	TimeValue t = GetCOREInterface()->GetTime();
 
@@ -491,35 +545,31 @@ BOOL ToNode::AddNode(INode* thisNode, INode* node)
 	MakeRefByID(FOREVER, (NUM_REFS + nodes.Count()-1), node);
 #endif
 
-	Matrix3 nodeTM = node->GetObjectTM(t);
-	baseTM.Append(1, &nodeTM);
-
 	UpdateUI();
 
 	return TRUE;
 }
 
-BOOL ToNode::RemoveNode(int i)
+BOOL ToPoint::RemoveNode(int i)
 {
 	if (i<0 || i>=nodes.Count())
 		return FALSE;
 
 	DeleteReference(NUM_REFS + i);
 	nodes.Delete(i,1);
-	baseTM.Delete(i,1);
 
 	// Remap all binds to use new node indexes
-	for (int pIdx=0; pIdx<pointInfo.Count(); pIdx++)
+	for (int pointIndex=0; pointIndex<pointInfo.Count(); pointIndex++)
 	{
-		for (int bIdx=(pointInfo[pIdx]->binds.Count()-1); bIdx>=0; bIdx--)
+		for (int bindIndex=(pointInfo[pointIndex]->binds.Count()-1); bindIndex>=0; bindIndex--)
 		{
-			int ni = pointInfo[pIdx]->binds[bIdx]->nodeIndex;
+			int ni = pointInfo[pointIndex]->binds[bindIndex]->nodeIndex;
 
 			if (ni == i)
-				UnBind(pIdx, bIdx);
+				UnBind(pointIndex, bindIndex);
 			else if (ni > i)
 			{
-				pointInfo[pIdx]->binds[bIdx]->nodeIndex = (ni-1);
+				pointInfo[pointIndex]->binds[bindIndex]->nodeIndex = (ni-1);
 			}
 		}
 	}
@@ -529,12 +579,12 @@ BOOL ToNode::RemoveNode(int i)
 	return TRUE;
 }
 
-int ToNode::GetNumNodes()
+int ToPoint::GetNumNodes()
 {
 	return nodes.Count();
 }
 
-INode* ToNode::GetNode(int i)
+INode* ToPoint::GetNode(int i)
 {
 	if (i>=0 && i<nodes.Count())
 		return nodes[i];
@@ -542,59 +592,60 @@ INode* ToNode::GetNode(int i)
 		return NULL;
 }
 
-BOOL ToNode::Bind(INode* thisNode, int pIdx, int nodeIndex, float weight)
+BOOL ToPoint::Bind(int thisIndex, int nodeIndex, int pointIndex, float weight)
 {
-	if (pIdx < 0 || pIdx >= pointInfo.Count()) return FALSE;
+	if (thisIndex < 0 || thisIndex >= pointInfo.Count()) return FALSE;
 	if (nodeIndex < 0 || nodeIndex >= nodes.Count()) return FALSE;
+	if (pointIndex < 0) return FALSE;
 
 	Interface* ip = GetCOREInterface();
 	if (!ip) return FALSE;
 	TimeValue t = ip->GetTime();
 
-	ObjectState thisOS = thisNode->EvalWorldState(t);
-	if (pIdx >= thisOS.obj->NumPoints()) return FALSE;
+	ObjectState bindOS = nodes[nodeIndex]->EvalWorldState(t);
+	if (pointIndex >= bindOS.obj->NumPoints()) return FALSE;
+	Point3 basePos = bindOS.obj->GetPoint(pointIndex) * nodes[nodeIndex]->GetObjectTM(t);
 
-	Point3 basePos = thisOS.obj->GetPoint(pIdx) * thisNode->GetObjectTM(t);
-
-	BOOL res = pointInfo[pIdx]->AddBind(basePos, nodeIndex, weight);
-
-	UpdateUI();
-
-	return res;
-}
-
-BOOL ToNode::UnBind(int pIdx, int bIdx)
-{
-	if (pIdx < 0 || pIdx >= pointInfo.Count()) return FALSE;
-
-	BOOL res = pointInfo[pIdx]->RemoveBind(bIdx);
+	BOOL res = pointInfo[thisIndex]->AddBind(basePos, nodeIndex, pointIndex, weight);
 
 	UpdateUI();
 
 	return res;
 }
 
-int ToNode::GetNumBinds(int pIdx)
+BOOL ToPoint::UnBind(int thisIndex, int bindIndex)
 {
-	if (pIdx < 0 || pIdx >= pointInfo.Count()) return -1;
+	if (thisIndex < 0 || thisIndex >= pointInfo.Count()) return FALSE;
 
-	int cnt = pointInfo[pIdx]->binds.Count();
+	BOOL res = pointInfo[thisIndex]->RemoveBind(bindIndex);
+
+	UpdateUI();
+
+	return res;
+}
+
+int ToPoint::GetNumBinds(int thisIndex)
+{
+	if (thisIndex < 0 || thisIndex >= pointInfo.Count()) return -1;
+
+	int cnt = pointInfo[thisIndex]->binds.Count();
 
 	return cnt;
 }
 
-BOOL ToNode::GetBindInfo(int pIdx, int bIdx, int& nIdx, float& weight)
+BOOL ToPoint::GetBindInfo(int pIdx, int bIdx, int& nIdx, int& idx, float& weight)
 {
 	if (pIdx < 0 || pIdx >= pointInfo.Count() ||
 		bIdx < 0 || bIdx >= pointInfo[pIdx]->binds.Count()) return FALSE;
 
 	nIdx = pointInfo[pIdx]->binds[bIdx]->nodeIndex;
+	idx = pointInfo[pIdx]->binds[bIdx]->pointIndex;
 	weight = pointInfo[pIdx]->binds[bIdx]->weight;
 
 	return TRUE;
 }
 
-float ToNode::GetBindWeight(int pIdx, int bIdx)
+float ToPoint::GetBindWeight(int pIdx, int bIdx)
 {
 	if (pIdx < 0 || pIdx >= pointInfo.Count() ||
 		bIdx < 0 || bIdx >= pointInfo[pIdx]->binds.Count()) return -1.0f;
@@ -602,7 +653,7 @@ float ToNode::GetBindWeight(int pIdx, int bIdx)
 	return pointInfo[pIdx]->binds[bIdx]->weight;
 }
 
-BOOL ToNode::SetBindWeight(int pIdx, int bIdx, float weight)
+BOOL ToPoint::SetBindWeight(int pIdx, int bIdx, float weight)
 {
 	if (pIdx < 0 || pIdx >= pointInfo.Count() ||
 		bIdx < 0 || bIdx >= pointInfo[pIdx]->binds.Count()) return FALSE;
@@ -612,7 +663,7 @@ BOOL ToNode::SetBindWeight(int pIdx, int bIdx, float weight)
 	return TRUE;
 }
 
-void ToNode::Update()
+void ToPoint::Update()
 {
 	NotifyDependents(FOREVER, PART_GEOM, REFMSG_CHANGE);
 	GetCOREInterface()->RedrawViews(GetCOREInterface()->GetTime());

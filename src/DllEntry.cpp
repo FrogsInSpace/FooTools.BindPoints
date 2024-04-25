@@ -72,7 +72,10 @@ TCHAR *GetString(int id)
 {
 	static TCHAR buf[256];
 
-	if (hInstance)
-		return LoadString(hInstance, id, buf, sizeof(buf)) ? buf : NULL;
+#if MAX_VERSION_MAJOR < 15
+	return LoadString(hInstance, id, buf, sizeof(buf)) ? buf : NULL;
+#else
+	return LoadString(hInstance, id, buf, _countof(buf)) ? buf : NULL;
+#endif	
 	return NULL;
 }

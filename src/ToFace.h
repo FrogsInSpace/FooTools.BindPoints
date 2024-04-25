@@ -16,7 +16,6 @@ public:
 	
 	// Animatable /////////////////////////////////////////////////////////////////////////////////
 	
-	void					GetClassName(TSTR& s);
 	Class_ID				ClassID();
 	void					DeleteThis();
 
@@ -33,7 +32,11 @@ public:
 	RefTargetHandle			GetReference(int i);
 	void					SetReference(int i, RefTargetHandle rtarg);
 	int						RemapRefOnLoad(int iref);
+#if MAX_RELEASE_R17
+	virtual RefResult		NotifyRefChanged(const Interval& changeInt, RefTargetHandle hTarget, PartID& partID, RefMessage message, BOOL propagate);
+#else
 	RefResult				NotifyRefChanged(Interval changeInt, RefTargetHandle hTarget, PartID& partID, RefMessage message);
+#endif
 
 	// ReferenceTarget ////////////////////////////////////////////////////////////////////////////
 
@@ -42,7 +45,15 @@ public:
 	// BaseObject /////////////////////////////////////////////////////////////////////////////////
 
 	CreateMouseCallBack*	GetCreateMouseCallBack();
-	TCHAR*					GetObjectName();
+
+#if MAX_RELEASE_R24
+	void GetClassName(MSTR& s, bool localized) const override { s = GetString(IDS_TOFACE_CLASSNAME); }
+	const TCHAR* GetObjectName(bool localized) { return GetString(IDS_TOFACE_CLASSNAME); }
+#else
+	void GetClassName(TSTR& s) { s = GetString(IDS_TOFACE_CLASSNAME); }
+	const TCHAR* GetObjectName() { return GetString(IDS_TOFACE_CLASSNAME); }
+#endif
+
 
 	// Modifier ///////////////////////////////////////////////////////////////////////////////////
 
