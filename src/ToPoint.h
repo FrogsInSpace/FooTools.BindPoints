@@ -60,8 +60,8 @@ class ToPoint : public Modifier
 		int RemapRefOnLoad(int iref);
 
 		// From Modifier
-		ChannelMask ChannelsUsed()  { return PART_GEOM|PART_TOPO; }
-		ChannelMask ChannelsChanged() { return GEOM_CHANNEL; }
+		ChannelMask ChannelsUsed()  { return static_cast<ChannelMask>(PART_GEOM|PART_TOPO); }
+		ChannelMask ChannelsChanged() { return static_cast<ChannelMask>(GEOM_CHANNEL); }
 		Class_ID InputType() { return defObjectClassID; }
 		Interval LocalValidity(TimeValue t);
 		void ModifyObject(TimeValue t, ModContext& mc, ObjectState* os, INode* node);

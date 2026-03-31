@@ -63,7 +63,7 @@ class ToShape : public Modifier
 		int RemapRefOnLoad(int iref);
 
 		// From Modifier
-		ChannelMask ChannelsUsed()  { return PART_GEOM|PART_TOPO; }
+		ChannelMask ChannelsUsed()  { return static_cast<ChannelMask>(PART_GEOM|PART_TOPO); }
 		ChannelMask ChannelsChanged() { return GEOM_CHANNEL; }
 		Class_ID InputType() { return defObjectClassID; }
 		Interval LocalValidity(TimeValue t);

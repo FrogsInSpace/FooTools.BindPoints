@@ -358,7 +358,7 @@ Interval ToFace::LocalValidity(TimeValue t)
 
 ChannelMask ToFace::ChannelsUsed()
 {
-	return PART_GEOM|PART_TOPO;
+	return static_cast<ChannelMask>(PART_GEOM|PART_TOPO);
 }
 
 ChannelMask ToFace::ChannelsChanged()
